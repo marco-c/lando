@@ -1,7 +1,9 @@
 import logging
 from typing import Optional
 
+from django.conf import settings
 from django.core.cache import cache
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
 
 from lando.utils.phabricator import PhabricatorClient, result_list_to_phid_dict
 
@@ -93,7 +95,12 @@ def get_project_phid(
     )
 
     value = phabricator.expect(project, "phid") if project else None
-    cache.set(key, value)
+    # Cache missing projects for the default timeout only, so that a project
+    # created later is picked up quickly.
+    timeout = (
+        settings.PHABRICATOR_PROJECT_PHID_CACHE_TIMEOUT if value else DEFAULT_TIMEOUT
+    )
+    cache.set(key, value, timeout)
     return value
 
 
